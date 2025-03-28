@@ -5,5 +5,7 @@
 ## Como usar o projeto
 
 > Abrir o arquivo pop_console.playground no Xcode e executar
+
 > ou
+
 > Abrir o arquivo main.swift e executar no Replit
