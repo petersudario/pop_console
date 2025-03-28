@@ -8,7 +8,7 @@ enum TipoMensagem {
     case promocao
     case lembrete
     case alerta
-    case notificacao 
+    case notificacao
 }
 
 struct Mensagem {
