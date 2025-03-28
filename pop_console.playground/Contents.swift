@@ -2,82 +2,104 @@
 //  main.swift
 //  pop_console
 //
-//  Created by Pedro Henrique Sudario da Silva, Guilherme Sampaio Furquim  & Enzo Enrico Boteon Chiuratto on 25/03/25.
+//  Created by Pedro Henrique Sudario da Silva, Guilherme Sampaio Furquim & Enzo Enrico Boteon Chiuratto on 25/03/25.
+//
 
-enum TipoMensagem {
-    case promocao
-    case lembrete
-    case alerta
-    case notificacao
+enum MessageType {
+    case promotion, reminder, alert, notification
 }
 
-struct Mensagem {
-    var tipo: TipoMensagem
-    var conteudo: String
+enum NotificationPriority {
+    case low, medium, high
 }
 
-protocol Notificavel {
-    var mensagem: Mensagem { get set }
-    func enviarNotificacao()
+struct Message {
+    let type: MessageType
+    let content: String
+    let priority: NotificationPriority
 }
 
-extension Notificavel {
-    func enviarNotificacao() {
-        print("notificação generica: \(mensagem.conteudo)")
+protocol Notifiable {
+    var message: Message { get }
+    func sendNotification()
+}
+
+extension Notifiable {
+    func sendNotification() {
+        let priorityTag = message.priority == .high ? "URGENTE! " : ""
+        print("\(priorityTag)Notificação genérica: \(message.content)")
     }
 }
 
-struct Email: Notificavel {
-    var enderecoEmail: String
-    var mensagem: Mensagem
+struct Email: Notifiable {
+    private let emailAddress: String
+    let message: Message
 
-    func enviarNotificacao() {
-        print("email enviado para \(enderecoEmail): \(mensagem.conteudo) [Tipo: \(mensagem.tipo)]")
+    init(emailAddress: String, message: Message) {
+        self.emailAddress = emailAddress
+        self.message = message
+    }
+
+    func sendNotification() {
+        let priorityTag = message.priority == .high ? "URGENTE! " : ""
+        print("\(priorityTag)Email enviado para \(emailAddress): \(message.content) [Tipo: \(message.type)]")
     }
 }
 
-struct SMS: Notificavel {
-    var numeroTelefone: String
-    var mensagem: Mensagem
+struct SMS: Notifiable {
+    private let phoneNumber: String
+    let message: Message
 
-    func enviarNotificacao() {
-        print("enviando SMS para \(numeroTelefone): \(mensagem.conteudo) [Tipo: \(mensagem.tipo)]")
+    init(phoneNumber: String, message: Message) {
+        self.phoneNumber = phoneNumber
+        self.message = message
+    }
+
+    func sendNotification() {
+        let priorityTag = message.priority == .high ? "URGENTE! " : ""
+        print("\(priorityTag)SMS enviado para \(phoneNumber): \(message.content) [Tipo: \(message.type)]")
     }
 }
 
-struct PushNotification: Notificavel {
-    let tokenDispositivo: String
-    var mensagem: Mensagem
+struct PushNotification: Notifiable {
+    private let deviceToken: String
+    let message: Message
 
-    func enviarNotificacao() {
-        print(
-            "enviando uma notificacao para o dispositivo \(tokenDispositivo): \(mensagem.conteudo) [Tipo: \(mensagem.tipo)]"
-        )
+    init(deviceToken: String, message: Message) {
+        self.deviceToken = deviceToken
+        self.message = message
     }
+
+    func sendNotification() {
+        let priorityTag = message.priority == .high ? "URGENTE! " : ""
+        print("\(priorityTag)Push enviado para \(deviceToken): \(message.content) [Tipo: \(message.type)]")
+    }
+}
+
+func filterChannels<T: Notifiable>(from channels: [Notifiable], ofType type: T.Type) -> [T] {
+    return channels.compactMap { $0 as? T }
 }
 
 func main() {
-    let mensagemPromocao = Mensagem(
-        tipo: .promocao, conteudo: "50% de desconto em todos os produtos!")
-    let mensagemLembrete = Mensagem(
-        tipo: .lembrete, conteudo: "Não se esqueça da reunião amanhã às 10h")
-    let mensagemAlerta = Mensagem(
-        tipo: .alerta, conteudo: "Alerta de segurança: acesso não autorizado detectado")
+    let messages = [
+        Message(type: .promotion, content: "50% de desconto em todos os produtos!", priority: .low),
+        Message(type: .reminder, content: "Não se esqueça da reunião amanhã às 10h", priority: .medium),
+        Message(type: .alert, content: "Alerta de segurança: acesso não autorizado detectado", priority: .high),
+        Message(type: .alert, content: "Alerta: Conta bancária esvaziada por hacker", priority: .high)
+    ]
 
-    let email = Email(enderecoEmail: "usuario@exemplo.com", mensagem: mensagemPromocao)
-    let sms = SMS(numeroTelefone: "+5511999998888", mensagem: mensagemLembrete)
-    let push = PushNotification(tokenDispositivo: "abcd1234efgh5678", mensagem: mensagemAlerta)
+    let notificationChannels: [Notifiable] = [
+        Email(emailAddress: "usuario@exemplo.com", message: messages[0]),
+        SMS(phoneNumber: "+5511999998888", message: messages[1]),
+        PushNotification(deviceToken: "abcd1234efgh5678", message: messages[2]),
+        Email(emailAddress: "pepo@pepo.com", message: messages[3])
+    ]
 
-    let canaisNotificacao: [Notificavel] = [email, sms, push]
+    notificationChannels.forEach { $0.sendNotification() }
 
-    for canal in canaisNotificacao {
-        canal.enviarNotificacao()
-    }
-
-    var emailAtualizado = email
-    emailAtualizado.mensagem = mensagemAlerta
-    emailAtualizado.enviarNotificacao()
+    let emailChannels = filterChannels(from: notificationChannels, ofType: Email.self)
+    print("\nApenas emails filtrados:")
+    emailChannels.forEach { $0.sendNotification() }
 }
-
 
 main()
